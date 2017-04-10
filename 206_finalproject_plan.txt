@@ -65,19 +65,19 @@ it is useful to be able to print movies when I want and to see if two movies are
 
 ANOTHER METHOD:
 - What will the name of the method be?
-add_actor()
+actor()
 
 - What will the method do?
-add an actor to the list of actors in the movie instance
+find the list of actors in the movie instance
 
 - Will it take any additional input? 
-the name of an actor
+a number
 
 - Will it return anything? Should it change anything about the instance/an instance variable? 
-it will not return anything but will modify the instance variable actor_list which is the list of actors in the movie. this method will add an actor to the list defined as actor_list
+it will return the first __ actors in the actor list. it will not modify anything
 
 - Why is it useful for this class definition, in this program?
-when I am researching what actors are in the movie it will be helpful to have a method to easily append a name to the list
+when I am researching what actors are in the movie it will be helpful to have a method to easily return the first 5 actors instead of all of them
 
 [If you definitely want to have a third, feel free to answer those questions a third time, because you'll have to do so eventually. when you write documentation!]
 
