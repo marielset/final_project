@@ -64,6 +64,15 @@ class MovieTests(unittest.TestCase):
         mymovie = Movie(m_dict)
         self.assertEqual(type(mymovie.rating), type(5))
 
+class DatabadeTests(unittest.TestCase):
+    def test_1_data_base(self):
+        conn = sqlite3.connect('final_project_tweets.db')
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM Tweets');
+        result = cur.fetchall()
+        self.assertTrue(len(result) >= 1, "Testing that the database is not empty")
+        conn.close()
+
 ## Remember to invoke all your tests...
 
 if __name__ == "__main__":
