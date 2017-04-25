@@ -97,7 +97,7 @@ def imdb_omdbapi(movietype):
         f.close()
     return omdb_item
 info = imdb_omdbapi("Beauty and the Beast")
-#print(info)
+# print(info)
 
 ## your movie class with data about each movie in it
 class Movie(object):
@@ -149,12 +149,20 @@ class Tweeter(object):
         self.screen_name = tweet_item["user"]["screen_name"]
         self.num_favs = tweet_item["user"]["favourites_count"]
         self.user_mentions = tweet_item['entities']['user_mentions']
+    def get_user_mentions(self):
+        mention_list = ""
+        for s in self.user_mentions:
+            mention_list += s['screen_name']
+            mention_list += " "
+            # print(s['screen_name'])
+            # print(s)
+        return mention_list
 
 # tweet_instance = Tweeter(movieData[1], my_movie)
 # print(tweet_instance.text)
 
 #list of the movie names
-movie_names =  ["The Boss Baby", "Beauty and the Beast", "Moonlight", "Arrival", "Zootopia", "Moana", "Finding Dory", "Jackie", "The BFG", "Lion"]
+movie_names =  ["The Boss Baby", "Beauty and the Beast", "Moonlight", "Harry Potter and the Deathly Hallows: Part 2", "Zootopia", "Moana", "Finding Dory", "Dark Knight", "The BFG", "Lion"]
 
 #list of the dictionaries of tweets
 tweets_list = []
@@ -167,6 +175,9 @@ for s in range(len(tweets_list)):
     for i in tweets_list[s]:
         tweet_instances.append(Tweeter(i, movie_names[s]))
 
+# print("Screen name = ", tweet_instances[0].screen_name)
+# print("user mentions = ", tweet_instances[0].user_mentions)
+listme = tweet_instances[0].get_user_mentions()
 #list of the dictionaries of movies
 movies_list = []
 for movie in movie_names:
@@ -182,10 +193,10 @@ for movie in movies_list:
 conn = sqlite3.connect('final_project.db')
 cur = conn.cursor()
 
-# your Tweets table with 6 columns
+# your Tweets table with 7 columns
 cur.execute('DROP TABLE IF EXISTS Tweets')
 table_spec = 'CREATE TABLE Tweets'
-table_spec += '(tweet_id TEXT PRIMARY KEY, tweet_text TEXT, user_id TEXT, movie_search TEXT, num_favs INTEGER, retweets INTEGER)'
+table_spec += '(tweet_id TEXT PRIMARY KEY, tweet_text TEXT, user_id TEXT, movie_search Movie, num_favs INTEGER, retweets INTEGER, user_mentions TEXT)'
 cur.execute(table_spec)
 
 # yout Users table with 3 columns
@@ -204,25 +215,26 @@ cur.execute(table_spec)
 
 #load data into tweets table
 for i in tweet_instances:
-  cur.execute('INSERT OR IGNORE INTO Tweets (tweet_id, tweet_text, user_id, movie_search, num_favs, retweets) VALUES (?, ?, ?, ?, ?, ?)', (i.ID, i.text, i.user_ID, i.movie, i.favs, i.retweets))
+    listme = i.get_user_mentions()
+    cur.execute('INSERT OR IGNORE INTO Tweets (tweet_id, tweet_text, user_id, movie_search, num_favs, retweets, user_mentions) VALUES (?, ?, ?, ?, ?, ?, ?)', (i.ID, i.text, i.user_ID, i.movie, i.favs, i.retweets, listme))
 
 #load data into users table
 for i in tweet_instances:
-  cur.execute('INSERT OR IGNORE INTO Users (user_id, screen_name, num_favs) VALUES (?, ?, ?)', (i.user_ID, i.user, i.num_favs))
+    cur.execute('INSERT OR IGNORE INTO Users (user_id, screen_name, num_favs) VALUES (?, ?, ?)', (i.user_ID, i.user, i.num_favs))
 
 #load data into users table for user mentions
 for i in tweet_instances:
-  for j in i.user_mentions:
-      unique_identifier = "user_{}".format(j['screen_name'])
-      if unique_identifier in CACHE_DICTION:
-          v = CACHE_DICTION[unique_identifier]
-      else:
-          v = api.get_user(j['screen_name']) 
-          CACHE_DICTION[unique_identifier] = v
-          f = open(CACHE_FNAME, 'w')
-          f.write(json.dumps(CACHE_DICTION))
-          f.close()
-      cur.execute('INSERT OR IGNORE INTO Users (user_id, screen_name, num_favs) VALUES (?, ?, ?)', (v["id_str"], v["screen_name"], v["favourites_count"]))
+    for j in i.user_mentions:
+        unique_identifier = "user_{}".format(j['screen_name'])
+        if unique_identifier in CACHE_DICTION:
+            v = CACHE_DICTION[unique_identifier]
+        else:
+            v = api.get_user(j['screen_name']) 
+            CACHE_DICTION[unique_identifier] = v
+            f = open(CACHE_FNAME, 'w')
+            f.write(json.dumps(CACHE_DICTION))
+            f.close()
+        cur.execute('INSERT OR IGNORE INTO Users (user_id, screen_name, num_favs) VALUES (?, ?, ?)', (v["id_str"], v["screen_name"], v["favourites_count"]))
 
 # my_mov = Movie(Beauty_Beast_movie_data)
 # lis = my_mov.actors(1)
@@ -242,11 +254,64 @@ query = 'SELECT movie_search FROM Tweets WHERE retweets > 1000'
 result = cur.execute(query)
 movies = []
 for s in result:
-    print("s = ", s)
-    print()
-    movies.append(s[0])
+    # print("s = ", s[0])
+    # print()
+    movies.append(s)
 
-# find out if multiple directors work for multiple companies
+# create a set so that you have one version of every movie mentioned
+my_set = {s[0] for s in movies}
+
+# create a dictionary of every movie and their directors
+director_dict = {x.title : x.director for x in movie_instances}
+
+# new_dict = {l:v for l, v in f}
+# print(type(new_dict))
+# for s in new_dict:
+#     print(type(s))
+#     print(s)
+# for x in director_dict:
+#     if x in my_set:
+#         print (x)
+
+# create a dictionary of every movie and their actor lists
+actor_list = {x.title : x.grab_actors() for x in movie_instances}
+
+# zip the movie, director and actors together
+my_zip = zip(movie_names, director_dict.values(), actor_list.values())
+
+zip_list = []
+for z in my_zip:
+    zip_list.append(z)
+
+# filter the list to include only those that are in the movies.
+
+f = filter(lambda x: x[0] in my_set, zip_list)
+
+popular_movie_list = []
+for l in f:
+    popular_movie_list.append(l)
+
+## create a dictionary of actors mapped to a dictionary of the director they worked for and how many times they worked for them
+# start by looping through each movie and actor list
+actor_dictionary = {}
+for m in popular_movie_list:
+    for act in m[2]:
+        if act in actor_dictionary:
+            if m[1] in actor_dictionary[act]:
+                actor_dictionary[act][m[1]] += 1
+            else:
+                temp = {m[1] : 1}
+                actor_dictionary[act] = temp
+        else:
+            temp = {m[1] : 1}
+            actor_dictionary[act] = temp
+
+# print(len(my_set))
+# for t in range(len(my_set)):
+#     m = my_set.pop()
+#     print(m)
+
+# find out if actors like to work with specific directors
 
 
 
