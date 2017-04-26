@@ -54,7 +54,10 @@ except:
     CACHE_DICTION = {}
 
 # store information in a cache file called finalproject_caching.json
-
+output = "final_results.txt"
+file = open(output, 'w')
+file.write('Twitter Analysis by Mariel Setton\n \n')
+file.write('Description:\n')
 ## function to get and cache data from a twitter search term
 def get_tweets_from_movie(movie):
     unique_identifier = "twitter_{}".format(movie)
@@ -277,6 +280,7 @@ my_set = {s[0] for s in movies}
 
 # create a dictionary of every movie and their directors
 director_list = [x.director for x in movie_instances]
+
 # print(director_list)
 # print(director_list["Beauty and the Beast"])
 # new_dict = {l:v for l, v in f}
@@ -306,8 +310,13 @@ f = filter(lambda x: x[0] in my_set, zip_list)
 popular_movie_list = []
 for l in f:
     popular_movie_list.append(l)
+    print(l)
+    file.write('Movie = '+ l[0])
+    file.write('Director = ' + l[1])
+    file.write('Actor list = ' + l[2])
+    file.write('\n')
     # print(l)
-
+file.write('\n')
 ## create a dictionary of actors mapped to a dictionary of the director they worked for and how many times they worked for them
 # start by looping through each movie and actor list
 actor_dictionary = {}
@@ -325,15 +334,18 @@ for m in popular_movie_list:
 #     print(l)
 #     print(actor_dictionary[l].items())
 #     print()
-
+file.write('The list of actors and the directors they worked with: ')
 # find out if actors like to work with specific directors by going through each actor and checking if there is a number greater than 2
 favored_actors = []
 for l in actor_dictionary:
     # print(l)
     # print(actor_dictionary[l])
+    file.write('\nActor: '+ l)
     for s in actor_dictionary[l]:
         # print (actor_dictionary[l][s])
         favored_actors.append((l, s, actor_dictionary[l][s]))
+        f.write(s, actor_dictionary[l][s])
+
             
 
 def sort_rank(x):
@@ -342,8 +354,9 @@ def sort_rank(x):
 # sort the tuples in order of the actors who work with the same directors the most
 list_of = sorted(favored_actors, reverse = True, key = sort_rank)
 # print(list_of[:5])
-
-
+file.write('\n \n')
+file.write('The most common actor-director pair is: '+ list_of[0][0] + ' ' + list_of[0][1] +' occuring ' +list_of[0][2] +' times')
+file.write('\n')
 query = 'SELECT movie_director FROM Movies'
 result = cur.execute(query)
 director_list = []
@@ -364,19 +377,12 @@ slit = {x for x in first_actor_list}
 # firnd the number of actors that are repeats and not new actors
 num_first_actors = len(first_actor_list) - len(slit)
 
-# output = "final_results.txt"
-# # Put the rest of your caching setup here:
-# try:
-#     o_file = open(output,'r')
-#     o_contents = o_file.read()
-#     o_file.close()
-#     CACHE_DICTION = json.loads(cache_contents)
-# except:
-#     CACHE_DICTION = {}
 
-print('There are 5 repeart directors and 6 repeat actors in a list of 19 movies.') 
-print('While some directors like to repeat the main actors they work with, the actors do not choose the directors they like to work with.')
-print()
+
+
+file.write('\nThere are 5 repeart directors and 6 repeat actors in a list of 19 movies.\n') 
+file.write('While some directors like to repeat the main actors they work with, the actors do not choose the directors they like to work with.\n')
+file.write('\n')
 
 conn.commit()
 
