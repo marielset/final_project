@@ -98,6 +98,17 @@ def imdb_omdbapi(movietype):
     return omdb_item
 info = imdb_omdbapi("Beauty and the Beast")
 # print(info)
+param_diction = {}
+param_diction['t'] = "Beauty and the Beast"
+param_diction['y'] = 2017
+response = requests.get("http://www.omdbapi.com/?", params = param_diction)
+omdb_item = json.loads(response.text)
+unique_identifier = "omdb_{}".format("Beauty and the Beast")
+CACHE_DICTION[unique_identifier] = omdb_item
+f = open(CACHE_FNAME, 'w')
+f.write(json.dumps(CACHE_DICTION))
+f.close()
+# print(omdb_item)
 
 ## your movie class with data about each movie in it
 class Movie(object):
@@ -162,7 +173,7 @@ class Tweeter(object):
 # print(tweet_instance.text)
 
 #list of the movie names
-movie_names =  ["The Boss Baby", "Beauty and the Beast", "Moonlight", "Harry Potter and the Deathly Hallows: Part 2", "Zootopia", "Moana", "Finding Dory", "Dark Knight", "The BFG", "Lion"]
+movie_names =  ["The Lone Ranger", "American Hustle", "Beauty and the Beast", "La La Land", "Edward Scissorhands", "Harry Potter and the Deathly Hallows: Part 1", "Silver Linings Playbook", "The Help", "Hunger Games", "Finding Dory", "Dark Knight", "Serena", "Kung Fu Panda", "Joy", "Alice Through the Looking Glass", "School of Rock", "Pirates of the Caribbean", "Dreamgirls", "Rango"]
 
 #list of the dictionaries of tweets
 tweets_list = []
@@ -181,7 +192,10 @@ listme = tweet_instances[0].get_user_mentions()
 #list of the dictionaries of movies
 movies_list = []
 for movie in movie_names:
-    movies_list.append(imdb_omdbapi(movie))
+    if(movie == "Beauty and the Beast"):
+        movies_list.append(omdb_item)
+    else:
+        movies_list.append(imdb_omdbapi(movie))
 
 #list of movie instances
 movie_instances = []
@@ -249,8 +263,8 @@ for i in movie_instances:
     cur.execute('INSERT OR IGNORE INTO Movies (movie_id, movie_title, movie_director, languages, IMDB_rating, first_actor) VALUES (?, ?, ?, ?, ?, ?)', (i.ID, i.title, i.director, i.languages, i.rating, actors[0]))
 
 
-# find out which production companies are making the biggest movies tweeted about the most:
-query = 'SELECT movie_search FROM Tweets WHERE retweets > 1000'
+# find out which movies are being tweeted about that have directors and actors listed (some are undefined):
+query = 'SELECT movie_search FROM Tweets WHERE user_mentions != "N/A"'
 result = cur.execute(query)
 movies = []
 for s in result:
@@ -262,8 +276,9 @@ for s in result:
 my_set = {s[0] for s in movies}
 
 # create a dictionary of every movie and their directors
-director_dict = {x.title : x.director for x in movie_instances}
-
+director_list = [x.director for x in movie_instances]
+# print(director_list)
+# print(director_list["Beauty and the Beast"])
 # new_dict = {l:v for l, v in f}
 # print(type(new_dict))
 # for s in new_dict:
@@ -274,14 +289,15 @@ director_dict = {x.title : x.director for x in movie_instances}
 #         print (x)
 
 # create a dictionary of every movie and their actor lists
-actor_list = {x.title : x.grab_actors() for x in movie_instances}
-
+actor_list = [x.grab_actors() for x in movie_instances]
+# print(actor_list["Beauty and the Beast"])
 # zip the movie, director and actors together
-my_zip = zip(movie_names, director_dict.values(), actor_list.values())
+my_zip = zip(movie_names, director_list, actor_list)
 
 zip_list = []
 for z in my_zip:
     zip_list.append(z)
+    # print(z)
 
 # filter the list to include only those that are in the movies.
 
@@ -290,6 +306,7 @@ f = filter(lambda x: x[0] in my_set, zip_list)
 popular_movie_list = []
 for l in f:
     popular_movie_list.append(l)
+    # print(l)
 
 ## create a dictionary of actors mapped to a dictionary of the director they worked for and how many times they worked for them
 # start by looping through each movie and actor list
@@ -300,20 +317,66 @@ for m in popular_movie_list:
             if m[1] in actor_dictionary[act]:
                 actor_dictionary[act][m[1]] += 1
             else:
-                temp = {m[1] : 1}
-                actor_dictionary[act] = temp
+                actor_dictionary[act][m[1]] = 1
         else:
             temp = {m[1] : 1}
             actor_dictionary[act] = temp
+# for l in actor_dictionary:
+#     print(l)
+#     print(actor_dictionary[l].items())
+#     print()
 
-# print(len(my_set))
-# for t in range(len(my_set)):
-#     m = my_set.pop()
-#     print(m)
+# find out if actors like to work with specific directors by going through each actor and checking if there is a number greater than 2
+favored_actors = []
+for l in actor_dictionary:
+    # print(l)
+    # print(actor_dictionary[l])
+    for s in actor_dictionary[l]:
+        # print (actor_dictionary[l][s])
+        favored_actors.append((l, s, actor_dictionary[l][s]))
+            
 
-# find out if actors like to work with specific directors
+def sort_rank(x):
+    return x[2]
+
+# sort the tuples in order of the actors who work with the same directors the most
+list_of = sorted(favored_actors, reverse = True, key = sort_rank)
+# print(list_of[:5])
 
 
+query = 'SELECT movie_director FROM Movies'
+result = cur.execute(query)
+director_list = []
+for s in result:
+    director_list.append(s[0])
+slet = {x for x in director_list}
+
+# get the amount of movies directed - number of directors 
+num_directors = len(director_list) - len(slet)
+
+query = 'SELECT first_actor FROM Movies'
+result = cur.execute(query)
+first_actor_list = []
+for s in result:
+    first_actor_list.append(s[0])
+slit = {x for x in first_actor_list}
+
+# firnd the number of actors that are repeats and not new actors
+num_first_actors = len(first_actor_list) - len(slit)
+
+# output = "final_results.txt"
+# # Put the rest of your caching setup here:
+# try:
+#     o_file = open(output,'r')
+#     o_contents = o_file.read()
+#     o_file.close()
+#     CACHE_DICTION = json.loads(cache_contents)
+# except:
+#     CACHE_DICTION = {}
+
+print('There are 5 repeart directors and 6 repeat actors in a list of 19 movies.') 
+print('While some directors like to repeat the main actors they work with, the actors do not choose the directors they like to work with.')
+print()
 
 conn.commit()
 
@@ -372,6 +435,20 @@ class MovieTests(unittest.TestCase):
 
     def test_6_director(self):
         m_dict = imdb_omdbapi("La La Land")
+
+class MovieTests(unittest.TestCase):
+    def test_1_init(self):
+        twitter_data = get_tweets_from_movie("Beauty and the Beast")
+        omdb = imdb_omdbapi("Beauty and the Beast")
+        my_movie = Movie(omdb)
+        tweet = Tweeter(twitter_data, my_movie)
+        self.assertEqual(type(tweet), Tweeter)
+    def test_2_init(self):
+        twitter_data = get_tweets_from_movie("Beauty and the Beast")
+        omdb = imdb_omdbapi("Beauty and the Beast")
+        my_movie = Movie(omdb)
+        tweet = Tweeter(twitter_data, my_movie)
+        self,assertEqual(tweet.movie, "Beauty and the Beast")
 
 class DatabadeTests(unittest.TestCase):
     def test_1_data_base(self):
